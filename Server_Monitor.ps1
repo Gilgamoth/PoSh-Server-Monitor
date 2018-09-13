@@ -23,6 +23,7 @@ Clear-Host
 
 #Servers in Downtime File
 $Cfg_DowntimeFile = ".\downtime.txt"
+$ExcludedSvrs = ""
 
 # E-Mail Report Enabled - $true or $false
 $Cfg_Email_Report = $true
@@ -36,7 +37,7 @@ $Cfg_Smtp_User = ""
 $Cfg_Smtp_Password = ""
 $Cfg_Email_Body = ""
 
-$ExcludedSvrs = ""
+# Check Variables
 $Cfg_Check_Disk_Space = $true
 $Cfg_Check_Services = $true
 $Cfg_Check_Event_Logs = $true
@@ -48,6 +49,10 @@ $Cfg_DiskPct_Warn = 10
 $Cfg_DiskFree_Warn = 10
 $Cfg_DiskPct_Crit = 5
 $Cfg_DiskFree_Crit = 5
+
+$AppLogIgnoredIDs = @("3028","12014","12017","12018")
+$SysLogIgnoredIDs = @("10016","36874","36887")
+$ExcludedServices = @("RemoteRegistry", "sppsvc", "ShellHWDetection", "dbupdate", "gupdate", "wbiosrvc", "clr_optim*", "wuauserv", "MSExchangeNotificationsBroker")
 
 $StartTime = get-date
 
@@ -171,7 +176,7 @@ foreach ($Server_Name in $server_list) {
             # Process Services
             if ($Cfg_Check_Services) {
                 Write-Host "- Processing Services @" (get-date)
-                $ServicesList = Get-Service -ComputerName $Server_Name -Exclude "RemoteRegistry", "sppsvc", "ShellHWDetection", "dbupdate", "gupdate", "wbiosrvc", "clr_optim*", "wuauserv" | Where-Object {($_.StartType -eq "Automatic") -and ($_.Status -eq "Stopped")}
+                $ServicesList = Get-Service -ComputerName $Server_Name -Exclude $ExcludedServices | Where-Object {($_.StartType -eq "Automatic") -and ($_.Status -eq "Stopped")}
 				if ($ServicesList.Count -gt 0) {
 					$Cfg_Warning_Count += $ServicesList.Count
 					$Cfg_Email_Body += "<TR><TD COLSPAN=5><TABLE BORDER=0><TR><TH>Service</TH><TH>Start Mode</TH><TH>State</TH></TR>"
@@ -201,10 +206,10 @@ foreach ($Server_Name in $server_list) {
                 Write-Host "- Processing Event Logs"
                 $Yesterday = (Get-Date).AddDays(-1)
                 Write-Host "-- Accessing Application Log @" (get-date)
-                $AppLog = Get-EventLog -ComputerName $Server_Name -After $Yesterday -LogName Application -EntryType Error, Warning | ?{@("12014","12017","12018") -notcontains $_.EventID}
+                $AppLog = Get-EventLog -ComputerName $Server_Name -After $Yesterday -LogName Application -EntryType Error, Warning | ?{$AppLogIgnoredIDs -notcontains $_.EventID}
                 $AppLog = $AppLog.GetEnumerator() | sort -Property Index
                 Write-Host "-- Accessing System Log @" (get-date)
-                $SystemLog = Get-EventLog -ComputerName $Server_Name -After $Yesterday -LogName System -EntryType Error, Warning | ?{@("10016","36874","36887") -notcontains $_.EventID}
+                $SystemLog = Get-EventLog -ComputerName $Server_Name -After $Yesterday -LogName System -EntryType Error, Warning | ?{$SysLogIgnoredIDs -notcontains $_.EventID}
                 $SystemLog = $SystemLog.GetEnumerator() | sort -Property Index
                 If ($AppLog.Count -gt 0 -OR $SystemLog.Count -gt 0) {
                     $ECount = $AppLog.Count + $SystemLog.Count
