@@ -197,7 +197,7 @@ foreach ($Server_Name in $server_list) {
             # Process Event Logs
             # $Events = Get-EventLog -LogName Application -EntryType Error -After (Get-Date).AddHours(-24) -ComputerName $Server_Name
             # $Events += Get-EventLog -LogName System -EntryType Error -After (Get-Date).AddHours(-24) -ComputerName $Server_Name
-            # $Events | group-object -property source -noelement | sort-object -property count �descending
+            # $Events | group-object -property source -noelement | Sort-Object -property count �descending
             
             if ($Cfg_Check_Event_Logs) {
                 $AppLog = $null
@@ -206,18 +206,18 @@ foreach ($Server_Name in $server_list) {
                 Write-Host "- Processing Event Logs"
                 $Yesterday = (Get-Date).AddDays(-1)
                 Write-Host "-- Accessing Application Log @" (get-date)
-                $AppLog = Get-EventLog -ComputerName $Server_Name -After $Yesterday -LogName Application -EntryType Error, Warning | ?{$AppLogIgnoredIDs -notcontains $_.EventID}
-                $AppLog = $AppLog.GetEnumerator() | sort -Property Index
+                $AppLog = Get-EventLog -ComputerName $Server_Name -After $Yesterday -LogName Application -EntryType Error, Warning | Where-Object{$AppLogIgnoredIDs -notcontains $_.EventID}
+                $AppLog = $AppLog.GetEnumerator() | Sort-Object -Property Index
                 Write-Host "-- Accessing System Log @" (get-date)
-                $SystemLog = Get-EventLog -ComputerName $Server_Name -After $Yesterday -LogName System -EntryType Error, Warning | ?{$SysLogIgnoredIDs -notcontains $_.EventID}
-                $SystemLog = $SystemLog.GetEnumerator() | sort -Property Index
+                $SystemLog = Get-EventLog -ComputerName $Server_Name -After $Yesterday -LogName System -EntryType Error, Warning | Where-Object{$SysLogIgnoredIDs -notcontains $_.EventID}
+                $SystemLog = $SystemLog.GetEnumerator() | Sort-Object -Property Index
                 If ($AppLog.Count -gt 0 -OR $SystemLog.Count -gt 0) {
                     $ECount = $AppLog.Count + $SystemLog.Count
                     $Cfg_Svr_Warning_Count = $Cfg_Svr_Warning_Count + $ECount
                     $Cfg_Warning_Count += 1
                     $Cfg_Email_Body += "<TR><TD COLSPAN=5><TABLE BORDER=0 WIDTH=100%>`n"
                     $Cfg_Email_Body += "<TR><TH>Log</TH><TH>Time</TH><TH>Type</TH><TH>Source</TH><TH>Event ID</TH></TR>`n"
-                    #$LogAnalysis = $Events | group-object -property source -noelement | sort-object -property count -descending
+                    #$LogAnalysis = $Events | group-object -property source -noelement | Sort-Object -property count -descending
                     Write-Host "-- Processing Application Log @" (get-date)
                     ForEach($Event in $AppLog) {
                         $ETime = $Event.TimeGenerated
